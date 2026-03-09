@@ -17,13 +17,15 @@ const state = {
     departments: [],
     equipmentTypes: [],
     deleteCallback: null,
+    notifications: [],
 };
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 document.addEventListener('DOMContentLoaded', async () => {
-    initSidebar();
+    initNav();
     initModals();
     initAddButton();
+    initNotifications();
 
     await Promise.all([
         loadDepartments(),
@@ -31,87 +33,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     ]);
 
     await navigateTo('dashboard');
+    await loadNotifications();
 });
 
-// ============ НАВИГАЦИЯ ============
-function initSidebar() {
-    document.querySelectorAll('.nav-item').forEach(item => {
+// ============ НАВИГАЦИЯ (top tabs + bottom nav) ============
+function initNav() {
+    // Top nav tabs + bottom nav items — все элементы с data-page
+    document.querySelectorAll('[data-page]').forEach(item => {
         item.addEventListener('click', async (e) => {
             e.preventDefault();
             const page = item.dataset.page;
-            await navigateTo(page);
-            closeSidebar();
+            if (page) await navigateTo(page);
         });
     });
-
-    document.getElementById('menuBtn').addEventListener('click', openSidebar);
-    document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
-    document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
-}
-
-function openSidebar() {
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('sidebarOverlay').classList.add('open');
-}
-
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
 async function navigateTo(page) {
     state.currentPage = page;
 
-    document.querySelectorAll('.nav-item').forEach(i => {
-        i.classList.toggle('active', i.dataset.page === page);
+    // Highlight nav tabs (desktop)
+    document.querySelectorAll('.nav-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.page === page);
     });
 
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const pageEl = document.getElementById(`page-${page}`);
-    if (pageEl) pageEl.classList.add('active');
+    // Highlight bottom nav (mobile)
+    document.querySelectorAll('.bnav-item').forEach(t => {
+        t.classList.toggle('active', t.dataset.page === page);
+    });
 
+    // Show correct view
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const viewEl = document.getElementById(`page-${page}`);
+    if (viewEl) viewEl.classList.add('active');
+
+    // Update hidden pageTitle for any legacy reads
     const titles = {
-        dashboard: 'Дашборд',
-        equipment: 'Техника',
-        employees: 'Сотрудники',
+        dashboard:   'Общие сведения',
+        equipment:   'Техника',
+        employees:   'Сотрудники',
         assignments: 'Назначения',
         departments: 'Отделы',
     };
-    document.getElementById('pageTitle').textContent = titles[page] || page;
+    const titleText = titles[page] || page;
+    const el = document.getElementById('pageTitle');
+    if (el) el.textContent = titleText;
 
-    const addBtnLabels = {
-        dashboard: null,
-        equipment: '+ Добавить технику',
-        employees: '+ Добавить сотрудника',
-        assignments: '+ Назначить технику',
-        departments: '+ Добавить отдел',
-    };
-    const addBtn = document.getElementById('addBtn');
-    if (addBtnLabels[page]) {
-        addBtn.style.display = '';
-        addBtn.textContent = addBtnLabels[page];
-    } else {
-        addBtn.style.display = 'none';
-    }
+    // Scroll top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     switch (page) {
-        case 'dashboard': await loadDashboard(); break;
-        case 'equipment': await loadEquipment(); break;
-        case 'employees': await loadEmployees(); break;
+        case 'dashboard':   await loadDashboard(); break;
+        case 'equipment':   await loadEquipment(); break;
+        case 'employees':   await loadEmployees(); break;
         case 'assignments': await loadAssignments(); break;
         case 'departments': await loadDepartmentsPage(); break;
     }
 }
 
-// ============ КНОПКА ДОБАВИТЬ ============
+// ============ КНОПКИ ДОБАВИТЬ (по страницам) ============
 function initAddButton() {
-    document.getElementById('addBtn').addEventListener('click', () => {
-        switch (state.currentPage) {
-            case 'equipment': openEquipmentModal(); break;
-            case 'employees': openEmployeeModal(); break;
-            case 'assignments': openAssignmentModal(); break;
-            case 'departments': openDeptModal(); break;
-        }
+    const map = {
+        addEquipBtn:  () => openEquipmentModal(),
+        addEmpBtn:    () => openEmployeeModal(),
+        addAssignBtn: () => openAssignmentModal(),
+        addDeptBtn:   () => openDeptModal(),
+    };
+    Object.entries(map).forEach(([id, fn]) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', fn);
+    });
+
+    // Widget «Все →» links
+    document.querySelectorAll('.widget-link[data-page]').forEach(link => {
+        link.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await navigateTo(link.dataset.page);
+        });
     });
 }
 
@@ -156,9 +153,8 @@ async function loadDashboard() {
         db.from('employees').select('id, is_active').eq('is_active', true),
         db.from('assignments')
             .select('id, assigned_date, returned_date, equipment(name), employees(full_name, departments(name))')
-            .is('returned_date', null)
             .order('assigned_date', { ascending: false })
-            .limit(6),
+            .limit(8),
     ]);
 
     const equip = equipRes.data || [];
@@ -180,18 +176,29 @@ async function loadDashboard() {
     const raEl = document.getElementById('recentAssignments');
     const assignments = assignRes.data || [];
     if (assignments.length === 0) {
-        raEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔗</div><p>Нет активных назначений</p></div>';
+        raEl.innerHTML = '<div class="empty-box"><div class="empty-ico">🔗</div><p>Нет назначений</p></div>';
     } else {
-        raEl.innerHTML = assignments.map(a => `
-            <div class="assignment-item">
-                <div class="assignment-icon">💻</div>
-                <div class="assignment-info">
-                    <div class="assignment-name">${esc(a.equipment?.name || '—')}</div>
-                    <div class="assignment-meta">${esc(a.employees?.full_name || '—')} · ${esc(a.employees?.departments?.name || 'Без отдела')}</div>
+        raEl.innerHTML = assignments.map(a => {
+            const isActive = !a.returned_date;
+            const statusHtml = isActive
+                ? '<span class="badge badge-active" style="font-size:11px">Активно</span>'
+                : '<span class="badge badge-written_off" style="font-size:11px">Возвращено</span>';
+            const dateLabel = isActive
+                ? `Выдано: ${formatDate(a.assigned_date)}`
+                : `Возвращено: ${formatDate(a.returned_date)}`;
+            return `
+            <div class="assign-item">
+                <div class="assign-avi">${isActive ? '💻' : '↩️'}</div>
+                <div class="assign-info">
+                    <div class="assign-eq">${esc(a.equipment?.name || '—')}</div>
+                    <div class="assign-who">${esc(a.employees?.full_name || '—')} · ${esc(a.employees?.departments?.name || 'Без отдела')}</div>
                 </div>
-                <div class="assignment-date">${formatDate(a.assigned_date)}</div>
-            </div>
-        `).join('');
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+                    ${statusHtml}
+                    <span class="assign-date">${dateLabel}</span>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     // Equipment by type
@@ -208,16 +215,16 @@ async function loadDashboard() {
     const maxVal = sorted[0]?.[1] || 1;
     const ebtEl = document.getElementById('equipmentByType');
     if (sorted.length === 0) {
-        ebtEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><p>Нет данных</p></div>';
+        ebtEl.innerHTML = '<div class="empty-box"><div class="empty-ico">📊</div><p>Нет данных</p></div>';
     } else {
         ebtEl.innerHTML = sorted.map(([name, count]) => `
-            <div class="type-bar-item">
-                <div class="type-bar-header">
-                    <span>${esc(name)}</span>
-                    <span><strong>${count}</strong></span>
+            <div class="bar-item">
+                <div class="bar-head">
+                    <span class="bar-label">${esc(name)}</span>
+                    <span class="bar-count">${count}</span>
                 </div>
-                <div class="type-bar-track">
-                    <div class="type-bar-fill" style="width:${Math.round(count/maxVal*100)}%"></div>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:${Math.round(count/maxVal*100)}%"></div>
                 </div>
             </div>
         `).join('');
@@ -227,7 +234,7 @@ async function loadDashboard() {
 // ============ EQUIPMENT ============
 async function loadEquipment() {
     const tbody = document.getElementById('equipmentBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spin"></div> Загрузка...</div></td></tr>';
 
     let query = db.from('equipment')
         .select('*, equipment_types(name)')
@@ -255,21 +262,21 @@ async function loadEquipment() {
 function renderEquipmentTable(items) {
     const tbody = document.getElementById('equipmentBody');
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">💻</div><p>Не найдено техники</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-box"><div class="empty-ico">💻</div><p>Техника не найдена</p></div></td></tr>';
         return;
     }
     tbody.innerHTML = items.map(e => `
         <tr>
-            <td><strong>${esc(e.name)}</strong></td>
+            <td class="tbl-bold">${esc(e.name)}</td>
             <td>${esc(e.equipment_types?.name || '—')}</td>
             <td>${esc([e.brand, e.model].filter(Boolean).join(' ') || '—')}</td>
             <td>${esc(e.serial_number || '—')}</td>
             <td>${esc(e.inventory_number || '—')}</td>
             <td>${statusBadge(e.status)}</td>
             <td>
-                <div class="td-actions">
-                    <button class="btn btn-icon btn-sm" onclick="openEquipmentModal(${e.id})" title="Редактировать">✏️</button>
-                    <button class="btn btn-icon btn-sm btn-icon-danger" onclick="deleteEquipment(${e.id})" title="Удалить">🗑️</button>
+                <div class="row-actions">
+                    <button class="btn btn-icon-sm" onclick="openEquipmentModal(${e.id})" title="Редактировать">✏️</button>
+                    <button class="btn btn-icon-sm btn-icon-del" onclick="deleteEquipment(${e.id})" title="Удалить">🗑️</button>
                 </div>
             </td>
         </tr>
@@ -349,7 +356,7 @@ async function deleteEquipment(id) {
 // ============ EMPLOYEES ============
 async function loadEmployees() {
     const tbody = document.getElementById('employeesBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spin"></div> Загрузка...</div></td></tr>';
 
     let query = db.from('employees')
         .select('*, departments(name)')
@@ -373,21 +380,21 @@ async function loadEmployees() {
 function renderEmployeesTable(items) {
     const tbody = document.getElementById('employeesBody');
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">👤</div><p>Не найдено сотрудников</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-box"><div class="empty-ico">👥</div><p>Сотрудники не найдены</p></div></td></tr>';
         return;
     }
     tbody.innerHTML = items.map(e => `
         <tr>
-            <td><strong>${esc(e.full_name)}</strong></td>
+            <td class="tbl-bold">${esc(e.full_name)}</td>
             <td>${esc(e.departments?.name || '—')}</td>
             <td>${esc(e.position || '—')}</td>
-            <td>${e.email ? `<a href="mailto:${esc(e.email)}" style="color:var(--primary)">${esc(e.email)}</a>` : '—'}</td>
+            <td>${e.email ? `<a class="tbl-link" href="mailto:${esc(e.email)}">${esc(e.email)}</a>` : '—'}</td>
             <td>${esc(e.phone || '—')}</td>
             <td><span class="badge ${e.is_active ? 'badge-active' : 'badge-inactive'}">${e.is_active ? 'Активен' : 'Уволен'}</span></td>
             <td>
-                <div class="td-actions">
-                    <button class="btn btn-icon btn-sm" onclick="openEmployeeModal(${e.id})" title="Редактировать">✏️</button>
-                    <button class="btn btn-icon btn-sm btn-icon-danger" onclick="deleteEmployee(${e.id})" title="Удалить">🗑️</button>
+                <div class="row-actions">
+                    <button class="btn btn-icon-sm" onclick="openEmployeeModal(${e.id})" title="Редактировать">✏️</button>
+                    <button class="btn btn-icon-sm btn-icon-del" onclick="deleteEmployee(${e.id})" title="Удалить">🗑️</button>
                 </div>
             </td>
         </tr>
@@ -459,7 +466,7 @@ async function deleteEmployee(id) {
 // ============ ASSIGNMENTS ============
 async function loadAssignments() {
     const tbody = document.getElementById('assignmentsBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spin"></div> Загрузка...</div></td></tr>';
 
     let query = db.from('assignments')
         .select('*, equipment(name), employees(full_name, departments(name))')
@@ -493,24 +500,24 @@ async function loadAssignments() {
 function renderAssignmentsTable(items) {
     const tbody = document.getElementById('assignmentsBody');
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">🔗</div><p>Нет назначений</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-box"><div class="empty-ico">🔗</div><p>Нет назначений</p></div></td></tr>';
         return;
     }
     tbody.innerHTML = items.map(a => `
         <tr>
-            <td><strong>${esc(a.equipment?.name || '—')}</strong></td>
+            <td class="tbl-bold">${esc(a.equipment?.name || '—')}</td>
             <td>${esc(a.employees?.full_name || '—')}</td>
             <td>${esc(a.employees?.departments?.name || '—')}</td>
             <td>${formatDate(a.assigned_date)}</td>
             <td>${a.returned_date
-                ? `<span class="badge badge-inactive">${formatDate(a.returned_date)}</span>`
+                ? `<span class="badge badge-written_off">${formatDate(a.returned_date)}</span>`
                 : '<span class="badge badge-active">Активно</span>'}</td>
             <td>${esc(a.notes || '—')}</td>
             <td>
-                <div class="td-actions">
-                    <button class="btn btn-icon btn-sm" onclick="openAssignmentModal(${a.id})" title="Редактировать">✏️</button>
-                    ${!a.returned_date ? `<button class="btn btn-icon btn-sm" onclick="returnEquipment(${a.id})" title="Вернуть">↩️</button>` : ''}
-                    <button class="btn btn-icon btn-sm btn-icon-danger" onclick="deleteAssignment(${a.id})" title="Удалить">🗑️</button>
+                <div class="row-actions">
+                    <button class="btn btn-icon-sm" onclick="openAssignmentModal(${a.id})" title="Редактировать">✏️</button>
+                    ${!a.returned_date ? `<button class="btn btn-icon-sm btn-icon-success" onclick="returnEquipment(${a.id})" title="Вернуть">↩️</button>` : ''}
+                    <button class="btn btn-icon-sm btn-icon-del" onclick="deleteAssignment(${a.id})" title="Удалить">🗑️</button>
                 </div>
             </td>
         </tr>
@@ -597,6 +604,7 @@ document.getElementById('saveAssignment').addEventListener('click', async () => 
     showToast(id ? 'Назначение обновлено' : 'Техника назначена', 'success');
     closeModal('assignmentModal');
     await loadAssignments();
+    loadNotifications();
 });
 
 async function returnEquipment(id) {
@@ -609,6 +617,7 @@ async function returnEquipment(id) {
     await db.from('equipment').update({ status: 'available', updated_at: new Date().toISOString() }).eq('id', item.equipment_id);
     showToast('Техника возвращена', 'success');
     await loadAssignments();
+    loadNotifications();
 }
 
 async function deleteAssignment(id) {
@@ -628,7 +637,7 @@ async function deleteAssignment(id) {
 // ============ DEPARTMENTS ============
 async function loadDepartmentsPage() {
     const grid = document.getElementById('departmentsGrid');
-    grid.innerHTML = '<div class="loading">Загрузка...</div>';
+    grid.innerHTML = '<div class="loading"><div class="spin"></div> Загрузка...</div>';
 
     const search = document.getElementById('deptSearch').value.trim().toLowerCase();
 
@@ -647,22 +656,22 @@ async function loadDepartmentsPage() {
     if (search) items = items.filter(d => d.name.toLowerCase().includes(search));
 
     if (items.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏢</div><p>Отделы не найдены</p></div>';
+        grid.innerHTML = '<div class="empty-box"><div class="empty-ico">🏢</div><p>Отделы не найдены</p></div>';
         return;
     }
 
     grid.innerHTML = items.map(d => `
         <div class="dept-card">
-            <div class="dept-card-header">
-                <div class="dept-icon">🏢</div>
+            <div class="dept-card-top">
+                <div class="dept-avi">🏢</div>
                 <div class="dept-name">${esc(d.name)}</div>
                 <div class="dept-actions">
-                    <button class="btn btn-icon btn-sm" onclick="openDeptModal(${d.id})" title="Редактировать">✏️</button>
-                    <button class="btn btn-icon btn-sm btn-icon-danger" onclick="deleteDept(${d.id})" title="Удалить">🗑️</button>
+                    <button class="btn btn-icon-sm" onclick="openDeptModal(${d.id})" title="Редактировать">✏️</button>
+                    <button class="btn btn-icon-sm btn-icon-del" onclick="deleteDept(${d.id})" title="Удалить">🗑️</button>
                 </div>
             </div>
-            <div class="dept-stats">
-                <div class="dept-stat">👥 <span>${empCount[d.id] || 0}</span> сотр.</div>
+            <div class="dept-meta">
+                <span>👥 <strong>${empCount[d.id] || 0}</strong> сотрудников</span>
             </div>
         </div>
     `).join('');
@@ -715,14 +724,14 @@ async function deleteDept(id) {
 
 // ============ MODALS ============
 function initModals() {
-    document.querySelectorAll('.modal-close, [data-modal]').forEach(el => {
+    document.querySelectorAll('.modal-close-btn, [data-modal]').forEach(el => {
         el.addEventListener('click', () => {
             const modalId = el.dataset.modal;
             if (modalId) closeModal(modalId);
         });
     });
 
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    document.querySelectorAll('.overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closeModal(overlay.id);
         });
@@ -761,9 +770,124 @@ function showToast(message, type = 'info') {
     toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${esc(message)}</span>`;
     container.appendChild(toast);
     setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease forwards';
+        toast.style.animation = 'toastOut 0.3s ease forwards';
         setTimeout(() => toast.remove(), 300);
     }, 3500);
+}
+
+// ============ NOTIFICATIONS ============
+function initNotifications() {
+    const btn = document.getElementById('notifBtn');
+    const dropdown = document.getElementById('notifDropdown');
+    const readAllBtn = document.getElementById('notifReadAll');
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('notifWrap').contains(e.target)) {
+            dropdown.classList.remove('open');
+        }
+    });
+
+    readAllBtn.addEventListener('click', () => {
+        state.notifications.forEach(n => n.read = true);
+        saveNotifState();
+        renderNotifications();
+    });
+}
+
+async function loadNotifications() {
+    // Load recent assignments and generate notifications
+    const { data } = await db.from('assignments')
+        .select('id, assigned_date, returned_date, equipment(name), employees(full_name)')
+        .order('assigned_date', { ascending: false })
+        .limit(10);
+
+    const saved = JSON.parse(localStorage.getItem('notif_read') || '{}');
+    const items = (data || []);
+
+    state.notifications = [];
+
+    items.forEach(a => {
+        // Notification for assignment
+        const assignKey = `assign_${a.id}`;
+        state.notifications.push({
+            id: assignKey,
+            icon: '🔗',
+            text: `${a.equipment?.name || 'Техника'} назначена сотруднику ${a.employees?.full_name || '—'}`,
+            sub: `Дата выдачи: ${formatDate(a.assigned_date)}`,
+            read: !!saved[assignKey],
+        });
+
+        // Notification for return
+        if (a.returned_date) {
+            const retKey = `return_${a.id}`;
+            state.notifications.push({
+                id: retKey,
+                icon: '↩️',
+                text: `${a.equipment?.name || 'Техника'} возвращена от ${a.employees?.full_name || '—'}`,
+                sub: `Дата возврата: ${formatDate(a.returned_date)}`,
+                read: !!saved[retKey],
+            });
+        }
+    });
+
+    // Sort unread first then keep order
+    state.notifications.sort((a, b) => (a.read ? 1 : 0) - (b.read ? 1 : 0));
+    // Keep max 12
+    state.notifications = state.notifications.slice(0, 12);
+
+    renderNotifications();
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    const unread = state.notifications.filter(n => !n.read).length;
+
+    if (unread > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = unread > 9 ? '9+' : String(unread);
+    } else {
+        badge.style.display = 'none';
+    }
+
+    if (state.notifications.length === 0) {
+        list.innerHTML = '<div class="notif-empty">Нет уведомлений</div>';
+        return;
+    }
+
+    list.innerHTML = state.notifications.map(n => `
+        <div class="notif-item ${n.read ? '' : 'unread'}" data-notif-id="${esc(n.id)}">
+            <div class="notif-item-icon">${n.icon}</div>
+            <div class="notif-item-body">
+                <div class="notif-item-text">${esc(n.text)}</div>
+                <div class="notif-item-sub">${esc(n.sub)}</div>
+            </div>
+            ${n.read ? '' : '<div class="notif-unread-dot"></div>'}
+        </div>
+    `).join('');
+
+    list.querySelectorAll('.notif-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const nid = el.dataset.notifId;
+            const n = state.notifications.find(x => x.id === nid);
+            if (n && !n.read) {
+                n.read = true;
+                saveNotifState();
+                renderNotifications();
+            }
+        });
+    });
+}
+
+function saveNotifState() {
+    const saved = {};
+    state.notifications.forEach(n => { if (n.read) saved[n.id] = true; });
+    localStorage.setItem('notif_read', JSON.stringify(saved));
 }
 
 // ============ HELPERS ============
