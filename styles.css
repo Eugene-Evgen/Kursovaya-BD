@@ -870,15 +870,39 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .topbar { padding: 0 16px; }
+    .topbar { padding: 0 16px; gap: 10px; }
+
+    .topbar-title { font-size: 15px; }
 
     .table-container { overflow-x: auto; }
+
+    /* Модальное окно на планшете */
+    .modal { max-height: 95vh; }
+
+    /* Карточки отделов */
+    .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+
+    /* Статкарточки — меньший padding */
+    .stat-card { padding: 14px; gap: 12px; }
+    .stat-value { font-size: 22px; }
 }
 
 @media (max-width: 480px) {
+    :root {
+        --topbar-height: 56px;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 10px;
     }
+
+    .stat-card { padding: 12px 10px; gap: 10px; }
+    .stat-icon { width: 40px; height: 40px; font-size: 18px; }
+    .stat-value { font-size: 20px; }
+    .stat-label { font-size: 11px; }
 
     .toolbar {
         flex-direction: column;
@@ -889,18 +913,71 @@ body {
 
     .filter-select { width: 100%; }
 
+    .topbar-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     .topbar-actions .btn {
-        padding: 8px 12px;
+        padding: 7px 10px;
         font-size: 13px;
     }
 
+    /* Скрывать текст кнопки «Добавить», оставлять значок */
+    .topbar-actions .btn .btn-label {
+        display: none;
+    }
+
+    .content { padding: 12px; }
+
+    /* Карточки отделов — 1 колонка */
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Модальное — почти на весь экран */
+    .modal-overlay { padding: 8px; align-items: flex-end; }
+    .modal {
+        max-height: 92vh;
+        border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .modal-header { padding: 16px 16px 12px; }
+    .modal-body { padding: 16px; }
+    .modal-footer {
+        padding: 12px 16px;
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    .modal-footer .btn { width: 100%; justify-content: center; }
+
     .toast-container {
         bottom: 16px;
-        right: 16px;
-        left: 16px;
+        right: 12px;
+        left: 12px;
     }
 
     .toast { min-width: auto; max-width: 100%; }
+
+    /* Таблица — скрывать менее важные колонки при необходимости */
+    .data-table th,
+    .data-table td { padding: 10px 10px; font-size: 13px; }
+
+    .dashboard-grid { gap: 12px; }
+    .card-header { padding: 12px 16px; }
+    .card-body { padding: 12px 16px; }
+}
+
+@media (max-width: 360px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .topbar { padding: 0 10px; }
+
+    .content { padding: 10px; }
+
+    .stat-card { padding: 10px; }
+
+    .btn { padding: 8px 12px; font-size: 13px; }
+
+    .data-table .td-actions .btn-icon span { display: none; }
 }
 
 /* ============ SCROLLBAR ============ */
