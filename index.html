@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ТехУчёт — Учёт компьютерной техники</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">🖥️</span>
+                <span class="logo-text">ТехУчёт</span>
+            </div>
+            <button class="sidebar-close" id="sidebarClose">✕</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Дашборд</span>
+            </a>
+            <a href="#" class="nav-item" data-page="equipment">
+                <span class="nav-icon">💻</span>
+                <span class="nav-text">Техника</span>
+            </a>
+            <a href="#" class="nav-item" data-page="employees">
+                <span class="nav-icon">👤</span>
+                <span class="nav-text">Сотрудники</span>
+            </a>
+            <a href="#" class="nav-item" data-page="assignments">
+                <span class="nav-icon">🔗</span>
+                <span class="nav-text">Назначения</span>
+            </a>
+            <a href="#" class="nav-item" data-page="departments">
+                <span class="nav-icon">🏢</span>
+                <span class="nav-text">Отделы</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main content -->
+    <div class="main-wrapper">
+        <!-- Top bar -->
+        <header class="topbar">
+            <button class="menu-btn" id="menuBtn">☰</button>
+            <div class="topbar-title" id="pageTitle">Дашборд</div>
+            <div class="topbar-actions">
+                <button class="btn btn-primary" id="addBtn">+ Добавить</button>
+            </div>
+        </header>
+
+        <!-- Content area -->
+        <main class="content" id="mainContent">
+
+            <!-- ==================== DASHBOARD ==================== -->
+            <div class="page active" id="page-dashboard">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-blue">💻</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statTotal">—</div>
+                            <div class="stat-label">Всего техники</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-green">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statAvailable">—</div>
+                            <div class="stat-label">Свободно</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-yellow">🔗</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statAssigned">—</div>
+                            <div class="stat-label">Назначено</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-red">🔧</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statRepair">—</div>
+                            <div class="stat-label">В ремонте</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-purple">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statEmployees">—</div>
+                            <div class="stat-label">Сотрудников</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-gray">📝</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="statWrittenOff">—</div>
+                            <div class="stat-label">Списано</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Последние назначения</h3>
+                        </div>
+                        <div class="card-body" id="recentAssignments">
+                            <div class="loading">Загрузка...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Техника по типам</h3>
+                        </div>
+                        <div class="card-body" id="equipmentByType">
+                            <div class="loading">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== EQUIPMENT ==================== -->
+            <div class="page" id="page-equipment">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" placeholder="Поиск техники..." id="equipmentSearch" class="search-input">
+                    </div>
+                    <div class="filters">
+                        <select class="filter-select" id="equipmentStatusFilter">
+                            <option value="">Все статусы</option>
+                            <option value="available">Свободно</option>
+                            <option value="assigned">Назначено</option>
+                            <option value="repair">В ремонте</option>
+                            <option value="written_off">Списано</option>
+                        </select>
+                        <select class="filter-select" id="equipmentTypeFilter">
+                            <option value="">Все типы</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="equipmentTable">
+                        <thead>
+                            <tr>
+                                <th>Наименование</th>
+                                <th>Тип</th>
+                                <th>Бренд / Модель</th>
+                                <th>Серийный №</th>
+                                <th>Инв. №</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="equipmentBody">
+                            <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== EMPLOYEES ==================== -->
+            <div class="page" id="page-employees">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" placeholder="Поиск сотрудника..." id="employeeSearch" class="search-input">
+                    </div>
+                    <div class="filters">
+                        <select class="filter-select" id="employeeDeptFilter">
+                            <option value="">Все отделы</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="employeesTable">
+                        <thead>
+                            <tr>
+                                <th>ФИО</th>
+                                <th>Отдел</th>
+                                <th>Должность</th>
+                                <th>Email</th>
+                                <th>Телефон</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeesBody">
+                            <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== ASSIGNMENTS ==================== -->
+            <div class="page" id="page-assignments">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" placeholder="Поиск по назначениям..." id="assignmentSearch" class="search-input">
+                    </div>
+                    <div class="filters">
+                        <select class="filter-select" id="assignmentStatusFilter">
+                            <option value="">Все</option>
+                            <option value="active">Активные</option>
+                            <option value="returned">Возвращены</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="assignmentsTable">
+                        <thead>
+                            <tr>
+                                <th>Техника</th>
+                                <th>Сотрудник</th>
+                                <th>Отдел</th>
+                                <th>Дата выдачи</th>
+                                <th>Дата возврата</th>
+                                <th>Заметки</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assignmentsBody">
+                            <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== DEPARTMENTS ==================== -->
+            <div class="page" id="page-departments">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" placeholder="Поиск отдела..." id="deptSearch" class="search-input">
+                    </div>
+                </div>
+                <div class="cards-grid" id="departmentsGrid">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Equipment Modal -->
+    <div class="modal-overlay" id="equipmentModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="equipmentModalTitle">Добавить технику</h2>
+                <button class="modal-close" data-modal="equipmentModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="equipmentForm" class="form-grid">
+                    <input type="hidden" id="equipmentId">
+                    <div class="form-group">
+                        <label>Наименование *</label>
+                        <input type="text" id="equipName" required placeholder="Например: Ноутбук Dell Latitude">
+                    </div>
+                    <div class="form-group">
+                        <label>Тип *</label>
+                        <select id="equipType" required>
+                            <option value="">Выберите тип</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Бренд</label>
+                        <input type="text" id="equipBrand" placeholder="Dell, HP, Lenovo...">
+                    </div>
+                    <div class="form-group">
+                        <label>Модель</label>
+                        <input type="text" id="equipModel" placeholder="Latitude 5420...">
+                    </div>
+                    <div class="form-group">
+                        <label>Серийный номер</label>
+                        <input type="text" id="equipSerial" placeholder="SN-XXXX">
+                    </div>
+                    <div class="form-group">
+                        <label>Инвентарный номер</label>
+                        <input type="text" id="equipInventory" placeholder="ИНВ-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Дата покупки</label>
+                        <input type="date" id="equipPurchaseDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Гарантия до</label>
+                        <input type="date" id="equipWarranty">
+                    </div>
+                    <div class="form-group">
+                        <label>Статус *</label>
+                        <select id="equipStatus" required>
+                            <option value="available">Свободно</option>
+                            <option value="assigned">Назначено</option>
+                            <option value="repair">В ремонте</option>
+                            <option value="written_off">Списано</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-full">
+                        <label>Заметки</label>
+                        <textarea id="equipNotes" rows="3" placeholder="Дополнительная информация..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="equipmentModal">Отмена</button>
+                <button class="btn btn-primary" id="saveEquipment">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Modal -->
+    <div class="modal-overlay" id="employeeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="employeeModalTitle">Добавить сотрудника</h2>
+                <button class="modal-close" data-modal="employeeModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="employeeForm" class="form-grid">
+                    <input type="hidden" id="employeeId">
+                    <div class="form-group form-full">
+                        <label>ФИО *</label>
+                        <input type="text" id="empFullName" required placeholder="Фамилия Имя Отчество">
+                    </div>
+                    <div class="form-group">
+                        <label>Отдел</label>
+                        <select id="empDepartment">
+                            <option value="">Не указан</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Должность</label>
+                        <input type="text" id="empPosition" placeholder="Системный администратор">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="empEmail" placeholder="user@company.ru">
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="text" id="empPhone" placeholder="+7 (XXX) XXX-XX-XX">
+                    </div>
+                    <div class="form-group">
+                        <label>Статус</label>
+                        <select id="empStatus">
+                            <option value="true">Активен</option>
+                            <option value="false">Уволен</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="employeeModal">Отмена</button>
+                <button class="btn btn-primary" id="saveEmployee">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Modal -->
+    <div class="modal-overlay" id="assignmentModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="assignmentModalTitle">Назначить технику</h2>
+                <button class="modal-close" data-modal="assignmentModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="assignmentForm" class="form-grid">
+                    <input type="hidden" id="assignmentId">
+                    <div class="form-group">
+                        <label>Техника *</label>
+                        <select id="assignEquipment" required>
+                            <option value="">Выберите технику</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Сотрудник *</label>
+                        <select id="assignEmployee" required>
+                            <option value="">Выберите сотрудника</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата выдачи *</label>
+                        <input type="date" id="assignDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата возврата</label>
+                        <input type="date" id="returnDate">
+                    </div>
+                    <div class="form-group form-full">
+                        <label>Заметки</label>
+                        <textarea id="assignNotes" rows="3" placeholder="Дополнительная информация..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="assignmentModal">Отмена</button>
+                <button class="btn btn-primary" id="saveAssignment">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Modal -->
+    <div class="modal-overlay" id="departmentModal">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h2 id="deptModalTitle">Добавить отдел</h2>
+                <button class="modal-close" data-modal="departmentModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="deptForm">
+                    <input type="hidden" id="deptId">
+                    <div class="form-group">
+                        <label>Название отдела *</label>
+                        <input type="text" id="deptName" required placeholder="Название отдела">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="departmentModal">Отмена</button>
+                <button class="btn btn-primary" id="saveDept">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h2>Подтверждение</h2>
+                <button class="modal-close" data-modal="confirmModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Вы уверены, что хотите удалить эту запись?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="confirmModal">Отмена</button>
+                <button class="btn btn-danger" id="confirmDelete">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
